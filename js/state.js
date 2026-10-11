@@ -31,7 +31,12 @@
       topics: {},           // regionId -> {c: correct, w: wrong}
       answered: 0, bestCombo: 0, blitzBest: 0,
       minutes: 0,
-      streak: 0, lastDay: null,
+      streak: 0,
+      lastDay: null,         // last day she actually practised
+      lastSeen: null,        // last day the atlas was opened
+      shield: 1,             // forgives one missed day per week
+      week: null,            // { start, days: [], claimed }
+      cub: { bond: 0, fedDay: null, seen: 0 },
       daily: null,
       sound: true
     };
@@ -48,30 +53,52 @@
         if (!S.powers) S.powers = blank().powers;
       }
     } catch (e) { /* no store available — play unsaved */ }
+    if (!S.cub) S.cub = { bond: 0, fedDay: null, seen: 0 };
     rollDay();
     return S;
   }
 
   var saveTimer = null;
+  function writeNow() {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    try { W.localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
+  }
   function save() {
     if (saveTimer) return;
-    saveTimer = setTimeout(function () {
-      saveTimer = null;
-      try { W.localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
-    }, 120);
+    saveTimer = setTimeout(function () { saveTimer = null; writeNow(); }, 120);
   }
 
-  /* ---------- daily streak and quests ---------- */
+  /* Writes are debounced, so flush them if the tab is closed or hidden before
+     the timer fires — otherwise the last answer of a session can be lost. */
+  W.addEventListener('pagehide', writeNow);
+  W.addEventListener('beforeunload', writeNow);
+  if (W.document) {
+    W.document.addEventListener('visibilitychange', function () {
+      if (W.document.visibilityState === 'hidden') writeNow();
+    });
+  }
+
+  /* ---------- the day, the week, the quests ---------- */
+  function mondayOf(dateStr) {
+    var d = new Date(dateStr + 'T00:00:00');
+    var day = (d.getDay() + 6) % 7;         // 0 = Monday
+    d.setDate(d.getDate() - day);
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+
+  var freshDay = false;
   function rollDay() {
     var t = today();
-    if (S.lastDay !== t) {
-      if (S.lastDay) {
-        var gap = daysBetween(S.lastDay, t);
-        S.streak = gap === 1 ? S.streak + 1 : 1;
-      } else S.streak = 1;
-      S.lastDay = t;
-      S.daily = null;
+
+    if (S.lastSeen !== t) { freshDay = !!S.lastSeen; S.lastSeen = t; S.daily = null; }
+
+    // A new week brings a fresh forgiveness shield and an empty chart.
+    var wk = mondayOf(t);
+    if (!S.week || S.week.start !== wk) {
+      S.week = { start: wk, days: [], claimed: false };
+      S.shield = 1;
     }
+
     if (!S.daily || S.daily.date !== t) {
       // Pick three quests deterministically from the date so they stay put all day.
       var seed = 0, i;
@@ -90,6 +117,39 @@
     }
     save();
   }
+
+  /* The streak counts days she actually practised, not days she opened the app.
+     One missed day a week is forgiven rather than wiping the whole run. */
+  function markPractice() {
+    var t = today();
+    if (S.lastDay === t) return null;
+    var gap = S.lastDay ? daysBetween(S.lastDay, t) : 0;
+    var forgave = false;
+    if (gap === 1) S.streak++;
+    else if (gap === 2 && S.shield > 0) { S.shield--; S.streak++; forgave = true; }
+    else S.streak = S.lastDay ? 1 : 1;
+    S.lastDay = t;
+    if (S.week && S.week.days.indexOf(t) < 0) S.week.days.push(t);
+    save();
+    return { streak: S.streak, forgave: forgave };
+  }
+
+  function weekDays() {
+    var out = [], base = S.week ? S.week.start : mondayOf(today());
+    var d = new Date(base + 'T00:00:00');
+    for (var i = 0; i < 7; i++) {
+      var ds = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+      out.push({
+        date: ds,
+        label: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
+        done: !!(S.week && S.week.days.indexOf(ds) >= 0),
+        today: ds === today()
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+  function weekCount() { return S.week ? S.week.days.length : 0; }
 
   /* Push progress at the day's quests. Returns quests that just completed. */
   function track(what, value) {
@@ -185,6 +245,24 @@
     return t;
   }
 
+  /* ---------- Nova, the star cub ---------- */
+  function cubForm() { return W.Cub ? W.Cub.formFor(totalStars()) : { id: 0 }; }
+  /* Returns the form she has just grown into, once, so it can be celebrated. */
+  function cubGrew() {
+    var f = cubForm();
+    if (f.id > (S.cub.seen || 0)) { S.cub.seen = f.id; save(); return f; }
+    return null;
+  }
+  function canFeed() { return S.cub.fedDay !== today(); }
+  function feed() {
+    if (!canFeed() || S.dust < 15) return false;
+    S.dust -= 15;
+    S.cub.fedDay = today();
+    S.cub.bond = (S.cub.bond || 0) + 1;
+    save();
+    return true;
+  }
+
   /* ---------- the toy box ---------- */
   function winToy(id) {
     var isNew = !S.toys[id];
@@ -212,6 +290,8 @@
     if (S.answered >= 30 && trickyList().length === 0) give('tricky0');
     if (S.bossBeaten.falls) give('frac');
     if (W.Toys && toyCount() >= W.Toys.list.length) give('toybox');
+    if (cubForm().id >= 5) give('celestial');
+    if (weekCount() >= 5) give('week5');
     var all = true;
     for (var i = 0; i < A.REGIONS.length; i++) if (!S.bossBeaten[A.REGIONS[i].id]) all = false;
     if (all) give('atlas');
@@ -220,7 +300,7 @@
   }
 
   W.Store = {
-    s: S, load: load, save: save, today: today,
+    s: S, load: load, save: save, flush: writeNow, today: today,
     addXp: addXp, addDust: addDust, spend: spend,
     record: record, trickyList: trickyList,
     winToy: winToy, toyCount: toyCount, toyTotal: toyTotal,
@@ -228,6 +308,10 @@
     stageUnlocked: stageUnlocked, bossUnlocked: bossUnlocked,
     regionUnlocked: regionUnlocked, totalStars: totalStars,
     checkBadges: checkBadges, track: track, claim: claim, rollDay: rollDay,
+    markPractice: markPractice, weekDays: weekDays, weekCount: weekCount,
+    cubForm: cubForm, cubGrew: cubGrew, canFeed: canFeed, feed: feed,
+    isFreshDay: function () { return freshDay; },
+    clearFreshDay: function () { freshDay = false; },
     reset: function () { var b = blank(); for (var k in b) S[k] = b[k]; rollDay(); save(); }
   };
 })(window);

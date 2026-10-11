@@ -18,6 +18,30 @@
   /* ======================= HUD ======================= */
   function lookGlyph() { return S.look ? A.shopItem(S.look).glyph : '🔭'; }
 
+  var cubMood = 'idle', cubMoodTimer = null;
+  function setCubMood(m, ms) {
+    cubMood = m;
+    if (cubMoodTimer) clearTimeout(cubMoodTimer);
+    paintCub();
+    if (ms) cubMoodTimer = setTimeout(function () { cubMood = 'idle'; paintCub(); }, ms);
+  }
+  function paintCub() {
+    var slot = $('#cubSlot');
+    if (slot && W.Cub) slot.innerHTML = W.Cub.svg(St.totalStars(), cubMood, 'tiny');
+  }
+
+  /* Flash a chip when its number goes up, so earnings are felt not just shown. */
+  function setChip(sel, val) {
+    var el = $(sel);
+    if (!el) return;
+    if (el.textContent !== String(val)) {
+      el.textContent = val;
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    }
+  }
+
   function hud() {
     var need = A.xpForLevel(S.level), pct = Math.round(S.xp / need * 100);
     $('#avatarGlyph').textContent = lookGlyph();
@@ -25,9 +49,10 @@
     $('#keeperName').textContent = S.name + ' · ' + A.titleFor(S.level);
     $('#xpFill').style.width = pct + '%';
     $('#xpText').textContent = S.xp + ' / ' + need + ' XP';
-    $('#chipStars').textContent = St.totalStars();
-    $('#chipDust').textContent = S.dust;
-    $('#chipStreak').textContent = S.streak;
+    setChip('#chipStars', St.totalStars());
+    setChip('#chipDust', S.dust);
+    setChip('#chipStreak', S.streak);
+    paintCub();
     $('#soundBtn').textContent = S.sound ? '🔔' : '🔕';
     $('#soundBtn').setAttribute('aria-label', S.sound ? 'Turn sound off' : 'Turn sound on');
   }
@@ -53,11 +78,36 @@
       case 'blitz': html = screenBlitz(); break;
       case 'tricky': html = screenTricky(); break;
       case 'toys': html = screenToys(); break;
+      case 'cub': html = screenCub(); break;
       case 'beasts': html = screenBeasts(); break;
       case 'shop': html = screenShop(); break;
       case 'grown': html = screenGrown(); break;
     }
     view.innerHTML = html;
+    view.classList.remove('enter');
+    void view.offsetWidth;
+    view.classList.add('enter');
+    if (route.name === 'result') countUp();
+  }
+
+  /* Roll the result figures up from zero — a number that moves reads as earned. */
+  function countUp() {
+    if (FX.reduce) return;
+    D.querySelectorAll('.rs b').forEach(function (el, i) {
+      var raw = el.textContent, m = /(-?\d+)/.exec(raw);
+      if (!m) return;
+      var target = +m[1], pre = raw.slice(0, m.index), post = raw.slice(m.index + m[1].length);
+      var t0 = null, dur = 650 + i * 70;
+      function step(ts) {
+        if (!t0) t0 = ts;
+        var k = Math.min(1, (ts - t0) / dur);
+        var e = 1 - Math.pow(1 - k, 3);
+        el.textContent = pre + Math.round(target * e) + post;
+        if (k < 1) W.requestAnimationFrame(step);
+      }
+      el.textContent = pre + '0' + post;
+      W.requestAnimationFrame(step);
+    });
   }
 
   /* ======================= sky map ======================= */
@@ -77,6 +127,26 @@
       '<div class="qgrid">' + rows + '</div></section>';
   }
 
+  function weekStrip() {
+    var days = St.weekDays(), done = St.weekCount();
+    var dots = days.map(function (d, i) {
+      return '<div class="wd' + (d.done ? ' on' : '') + (d.today ? ' now' : '') + '" style="--i:' + i + '">' +
+        '<span class="wdot">' + (d.done ? '★' : '') + '</span>' +
+        '<i>' + d.label + '</i></div>';
+    }).join('');
+    var ready = done >= 5 && S.week && !S.week.claimed;
+    var note = S.week && S.week.claimed
+      ? 'Weekly toy collected. Nice week.'
+      : done >= 5 ? 'Five nights reached — your legendary toy is waiting.'
+      : (5 - done) + ' more night' + (5 - done === 1 ? '' : 's') + ' this week for a legendary toy.';
+    return '<section class="panel weekpanel">' +
+      '<h2 class="ph">This week in the sky <span class="phsub">' + done + ' of 7 nights practised</span></h2>' +
+      '<div class="wrow">' + dots + '</div>' +
+      '<div class="wfoot"><p>' + note + '</p>' +
+      (ready ? '<button class="claim wide" data-weekclaim="1">Open your legendary toy ✨</button>' : '') +
+      '</div></section>';
+  }
+
   function screenMap() {
     var cards = A.REGIONS.map(function (r, i) {
       var open = St.regionUnlocked(r.id), stars = St.regionStars(r.id), max = r.stages.length * 3 + 3;
@@ -93,7 +163,7 @@
         (beat ? '<span class="tag">Region lit</span>' : '<span class="tag soft">' + r.stages.length + ' stages + boss</span>') +
         '</div></div></button>';
     }).join('');
-    return questStrip() +
+    return weekStrip() + questStrip() +
       '<section class="panel"><h2 class="ph">The eight regions <span class="phsub">pick a place to practise</span></h2>' +
       '<div class="rgrid">' + cards + '</div></section>';
   }
@@ -187,8 +257,29 @@
 
     var input = q.choices ? choiceGrid(q) : keypad();
     var powers = powerRow(q);
-    return '<section class="panel play">' + head + status + body + input + powers +
+    var heat = run.combo >= 10 ? ' blazing' : run.combo >= 5 ? ' hot' : run.combo >= 3 ? ' warm' : '';
+    return '<section class="panel play' + heat + (run.hurt ? ' hurt' : '') + '">' + head + status + body + input + powers +
       '<div id="fb" class="fb" hidden></div></section>';
+  }
+
+  /* The first answer of the day moves the streak and lights the week chart. */
+  function notePractice() {
+    var p = St.markPractice();
+    if (!p) return;
+    toast(p.forgave
+      ? '🛡️ Streak saved — your shield covered the day you missed. ' + p.streak + ' days running.'
+      : p.streak > 1 ? '🔥 Day ' + p.streak + ' in a row. Nova is pleased.'
+      : '🌙 First night of a new streak.');
+    hud();
+  }
+
+  function toast(msg) {
+    var t = D.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    D.body.appendChild(t);
+    setTimeout(function () { t.classList.add('out'); }, 3200);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3800);
   }
 
   function mult() { return run.combo >= 10 ? 3 : run.combo >= 5 ? 2 : 1; }
@@ -231,6 +322,8 @@
     run.picked = val;
 
     St.record(q, right, run.drill ? null : run.region.id);
+    notePractice();
+    setCubMood(right ? 'happy' : 'sad', right ? 1400 : 2600);
     if (right) {
       run.right++; run.combo++;
       run.best = Math.max(run.best, run.combo);
@@ -243,7 +336,7 @@
       run.wrong++; run.combo = 0;
       if (run.isBoss) {
         if (S.powers.shield > 0) { S.powers.shield--; St.save(); }
-        else { run.hearts--; FX.Sound.hit(); }
+        else { run.hearts--; run.hurt = true; FX.Sound.hit(); setTimeout(function () { if (run) run.hurt = false; }, 700); }
       }
       FX.Sound.wrong();
       // Put a fresh question of the same kind back in the queue, up to three times.
@@ -313,8 +406,8 @@
         '<p>' + steps[i] + '</p></li>';
     }
 
-    return '<div class="fxhead"><span class="fxorb">💫</span>' +
-      '<div class="fxtitle"><b>Let\'s relight this star</b><i>This is the part where it sticks</i></div></div>' +
+    return '<div class="fxhead">' + W.Cub.svg(St.totalStars(), 'sad', 'mini') +
+      '<div class="fxtitle"><b>Let\'s relight this star</b><i>Nova will walk you through it</i></div></div>' +
       '<div class="fxpicked"><span class="fxyou">You picked</span> <b>' + pickedHtml(q) + '</b>' +
       '<p>' + (why || 'Not that one — here is how it works.') + '</p></div>' +
       '<div class="fxwalk"><span class="fxlabel">Solve it together</span>' +
@@ -383,13 +476,14 @@
     }
     var badges = St.checkBadges({ stars: stars });
     var newBeast = cleared && r.isBoss ? r.region.beast : null;
+    var grew = St.cubGrew();
 
     if (cleared) { FX.Sound.star(); if (burst) burst.fire(stars === 3 ? 110 : 70); }
     if (ups) setTimeout(function () { FX.Sound.level(); if (burst) burst.fire(90, 120); }, 500);
 
     go('result', {
       cleared: cleared, stars: stars, dust: dust, xp: xp, ups: ups, badges: badges,
-      beast: newBeast, right: r.right, wrong: r.wrong, best: r.best, drill: !!r.drill,
+      beast: newBeast, grew: grew, right: r.right, wrong: r.wrong, best: r.best, drill: !!r.drill,
       region: r.region.id, idx: r.idx, isBoss: r.isBoss, title: r.title, doubled: r.doubled
     });
     run = null;
@@ -404,6 +498,13 @@
       nextBtn = '<button class="go" data-play="' + p.region + ':' + nextIdx + '">Next: ' + esc(r.stages[nextIdx].name) + ' ›</button>';
     } else if (p.cleared && !p.isBoss && St.bossUnlocked(p.region)) {
       nextBtn = '<button class="go boss" data-play="' + p.region + ':boss">Face ' + esc(r.boss.name) + ' ' + r.boss.glyph + '</button>';
+    }
+
+    var grewHtml = '';
+    if (p.grew) {
+      grewHtml = '<div class="newbeast grewbox"><div class="nbtag">Nova grew!</div>' +
+        W.Cub.svg(St.totalStars(), 'happy', 'mid') +
+        '<h3>' + esc(p.grew.name) + '</h3><p>' + esc(p.grew.blurb) + '</p></div>';
     }
 
     var beastHtml = '';
@@ -434,7 +535,7 @@
       '<div class="rs teal"><b>+' + p.dust + '</b><i>stardust' + (p.doubled ? ' (×2)' : '') + '</i></div>' +
       '</div>' +
       (p.ups ? '<div class="levelup">🎉 Level ' + S.level + ' — you are now a ' + A.titleFor(S.level) + '!</div>' : '') +
-      beastHtml + badgeHtml +
+      grewHtml + beastHtml + badgeHtml +
       '<div class="ractions">' + nextBtn +
       '<button class="go ghost" data-play="' + p.region + ':' + (p.isBoss ? 'boss' : p.idx) + '">Play again</button>' +
       '<button class="go ghost" data-nav="region" data-rid="' + p.region + '">Back to ' + esc(r.name) + '</button>' +
@@ -542,6 +643,7 @@
     if (!blitz || blitz.locked) return;
     var q = blitz.q, right = String(q.choices[i].v) === String(q.answer);
     St.record(q, right, null);
+    notePractice();
     St.track('answers', 1);
     if (right) {
       blitz.score++; blitz.combo++;
@@ -607,6 +709,38 @@
     go('play');
   }
 
+  /* ======================= Nova ======================= */
+  function screenCub() {
+    var stars = St.totalStars(), form = W.Cub.formFor(stars), next = W.Cub.nextForm(stars);
+    var pct = next ? Math.round((stars - form.stars) / (next.stars - form.stars) * 100) : 100;
+    var fed = !St.canFeed(), canPay = S.dust >= 15;
+
+    var stages = W.Cub.FORMS.map(function (f) {
+      var got = stars >= f.stars;
+      return '<div class="cstage' + (got ? ' on' : '') + (f.id === form.id ? ' here' : '') + '">' +
+        '<span class="cdot"></span><b>' + esc(f.name) + '</b>' +
+        '<i>' + (f.stars === 0 ? 'the beginning' : f.stars + ' stars') + '</i></div>';
+    }).join('');
+
+    return '<section class="panel cubpanel">' +
+      '<h2 class="ph">🌟 Nova <span class="phsub">' + esc(form.name) + ' · bond level ' + (S.cub.bond || 0) + '</span></h2>' +
+      '<div class="cubstage">' + W.Cub.svg(stars, 'idle', 'big') + '</div>' +
+      '<p class="cubblurb">' + esc(form.blurb) + '</p>' +
+      (next
+        ? '<div class="cubnext"><div class="cnhead"><span>Next form: <b>' + esc(next.name) + '</b></span>' +
+          '<span class="cnnum">' + stars + ' / ' + next.stars + ' ⭐</span></div>' +
+          '<div class="qbar big"><i style="width:' + pct + '%"></i></div>' +
+          '<p>Nova grows when you earn stars, so every stage you play well changes how they look.</p></div>'
+        : '<div class="cubnext maxed"><b>Nova has reached their Celestial form.</b>' +
+          '<p>There is nothing left to grow into — only more sky to explore together.</p></div>') +
+      '<div class="cstages">' + stages + '</div>' +
+      '<button class="go' + (fed || !canPay ? ' ghost' : '') + '" data-feed="1"' + (fed || !canPay ? ' disabled' : '') + '>' +
+      (fed ? 'Nova has eaten today — come back tomorrow 🌙'
+           : canPay ? 'Feed Nova some stardust (15 ✨)' : 'You need 15 stardust to feed Nova') +
+      '</button>' +
+      '</section>';
+  }
+
   /* ======================= Toy Box ======================= */
   function screenToys() {
     var T = W.Toys, total = T.list.length, got = St.toyCount(), opened = St.toyTotal();
@@ -630,12 +764,14 @@
   /* ======================= Star Beasts ======================= */
   function constellation(id, bright) {
     var b = A.BEASTS[id], lines = '', dots = '';
-    b.edges.forEach(function (e) {
+    b.edges.forEach(function (e, i) {
       var p = b.pts[e[0]], q2 = b.pts[e[1]];
-      lines += '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q2[0] + '" y2="' + q2[1] + '"/>';
+      var len = Math.ceil(Math.sqrt(Math.pow(q2[0] - p[0], 2) + Math.pow(q2[1] - p[1], 2)));
+      lines += '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q2[0] + '" y2="' + q2[1] +
+        '" style="--i:' + i + ';--len:' + len + '" stroke-dasharray="' + len + '" stroke-dashoffset="' + len + '"/>';
     });
     b.pts.forEach(function (p, i) {
-      dots += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (i === 0 ? 2.8 : 2) + '"/>';
+      dots += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (i === 0 ? 2.8 : 2) + '" style="--i:' + i + '"/>';
     });
     return '<div class="cons' + (bright ? ' bright' : '') + '"><svg viewBox="0 0 100 72" aria-hidden="true">' +
       '<g class="clines">' + lines + '</g><g class="cdots">' + dots + '</g></svg></div>';
@@ -789,6 +925,26 @@
       if (got) { FX.Sound.star(); if (burst) burst.fire(45, 140); }
       return render();
     }
+    if (t.dataset.wbgo) { FX.Sound.tap(); return closeWelcome(true); }
+    if (t.dataset.feed) {
+      if (!St.feed()) return;
+      FX.Sound.gift(false);
+      setCubMood('happy', 2600);
+      if (burst) burst.fire(34, W.innerHeight * 0.4);
+      toast('Nova munched the stardust happily. Bond level ' + S.cub.bond + '.');
+      return render();
+    }
+    if (t.dataset.weekclaim) {
+      if (!S.week || S.week.claimed || St.weekCount() < 5) return;
+      S.week.claimed = true;
+      var toy = W.Toys.drawRarity('legend');
+      var fresh = St.winToy(toy.id);
+      if (fresh) St.addDust(5);
+      St.save();
+      FX.Sound.gift(fresh);
+      W.Toys.reveal(toy, fresh);
+      return render();
+    }
     if (t.dataset.reset) {
       if (W.confirm('Erase every star, beast and badge and start the atlas over?')) { St.reset(); go('map'); }
       return;
@@ -824,12 +980,65 @@
     }
   });
 
+  /* ======================= coming back ======================= */
+  /* Shown once on the first open of a new day: Nova wakes up, the week so far,
+     and a sky gift to open. */
+  function welcomeBack() {
+    if (!St.isFreshDay() || !S.lastDay) return false;
+    St.clearFreshDay();
+
+    var stars = St.totalStars(), form = W.Cub.formFor(stars);
+    var dots = St.weekDays().map(function (d, i) {
+      return '<div class="wd' + (d.done ? ' on' : '') + (d.today ? ' now' : '') + '" style="--i:' + i + '">' +
+        '<span class="wdot">' + (d.done ? '★' : '') + '</span><i>' + d.label + '</i></div>';
+    }).join('');
+
+    var el = D.createElement('div');
+    el.className = 'wbwrap';
+    el.innerHTML = '<div class="wbcard">' +
+      '<div class="wbcub" id="wbCub">' + W.Cub.svg(stars, 'sleep', 'mid') + '</div>' +
+      '<h2 class="wbtitle">Welcome back, ' + esc(S.name) + '</h2>' +
+      '<p class="wbsub" id="wbSub">Nova has been asleep in the ' + esc(form.name.toLowerCase()) + ' nest…</p>' +
+      '<div class="wrow small">' + dots + '</div>' +
+      '<div class="wbstats">' +
+        '<span><b>' + S.streak + '</b> day streak</span>' +
+        '<span><b>' + stars + '</b> stars</span>' +
+        '<span><b>' + St.toyCount() + '</b> toys</span>' +
+      '</div>' +
+      '<button class="go" data-wbgo="1">Open tonight\'s sky gift 🎁</button>' +
+      '</div>';
+    D.body.appendChild(el);
+
+    // Nova stirs, then wakes up pleased to see her.
+    setTimeout(function () {
+      var c = $('#wbCub'), sub = $('#wbSub');
+      if (c) c.innerHTML = W.Cub.svg(stars, 'happy', 'mid');
+      if (sub) sub.textContent = 'Nova woke up the moment you arrived.';
+      FX.Sound.star();
+    }, 1100);
+    return true;
+  }
+
+  function closeWelcome(gift) {
+    var el = D.querySelector('.wbwrap');
+    if (el) { el.classList.add('out'); setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 350); }
+    if (!gift) return;
+    // Three nights in makes the sky gift a rare one.
+    var toy = St.weekCount() >= 3 ? W.Toys.drawRarity(St.weekCount() >= 5 ? 'legend' : 'rare') : W.Toys.draw();
+    var fresh = St.winToy(toy.id);
+    if (fresh) St.addDust(5);
+    St.addDust(10);
+    St.save();
+    setTimeout(function () { FX.Sound.gift(fresh); W.Toys.reveal(toy, fresh); hud(); }, 380);
+  }
+
   /* ======================= boot ======================= */
   function boot() {
     new FX.Sky(D.getElementById('sky'));
     burst = new FX.Burst(D.getElementById('fx'));
     if (W.Toys) W.Toys.init(burst);
     render();
+    welcomeBack();
   }
 
   if (W.claude && W.claude.hot) {

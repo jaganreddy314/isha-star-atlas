@@ -61,6 +61,12 @@
     return toy;
   }
 
+  /* The weekly chart pays out a guaranteed legendary. */
+  function drawRarity(r) {
+    var pool = TOYS.filter(function (t) { return t.r === r; });
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   var burst = null;
   var live = null;
 
@@ -114,6 +120,7 @@
     rarity: RARITY,
     init: function (b) { burst = b; },
     draw: draw,
+    drawRarity: drawRarity,
     reveal: reveal,
     clear: clear,
     byId: function (id) { for (var i = 0; i < TOYS.length; i++) if (TOYS[i].id === id) return TOYS[i]; return null; }

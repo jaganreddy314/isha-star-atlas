@@ -181,7 +181,9 @@
     { id: 'tricky0', name: 'Tricky Tamer', glyph: '🧠', desc: 'Clear every tricky fact.' },
     { id: 'frac', name: 'Fraction Friend', glyph: '💧', desc: 'Finish all of Fraction Falls.' },
     { id: 'atlas', name: 'Atlas Complete', glyph: '🗺️', desc: 'Light up all eight regions.' },
-    { id: 'toybox', name: 'Toy Collector', glyph: '🎁', desc: 'Win every toy in the toy box.' }
+    { id: 'toybox', name: 'Toy Collector', glyph: '🎁', desc: 'Win every toy in the toy box.' },
+    { id: 'celestial', name: 'Nova Risen', glyph: '🌟', desc: 'Raise Nova to their Celestial form.' },
+    { id: 'week5', name: 'Five Nights', glyph: '🌙', desc: 'Practise on five days in one week.' }
   ];
 
   /* ---------- Levels ---------- */

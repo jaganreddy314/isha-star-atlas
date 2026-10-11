@@ -46,6 +46,18 @@ No build step and no dependencies — plain HTML, CSS and ES5 JavaScript.
   pays 2 stardust. Multiple-choice distractors each carry their own reason;
   typed answers are diagnosed for dropped carries, borrowing the wrong way
   round, digit swaps and off-by-one slips.
+- **Nova, the star cub** — an SVG creature that hatches from the first cleared
+  stage and grows a new form at 1, 8, 20, 36 and 60 stars: ears, then a tail,
+  then a glow mark, then wings, then a crown. Growth is keyed to stars, so the
+  creature is a picture of what she has actually learned. Nova lives in the HUD,
+  cheers correct answers, and is the one who walks her through the repair panel.
+  She can be fed stardust once a day.
+- **This week in the sky** — a seven-night chart. Five nights in a week pays a
+  guaranteed legendary toy. The streak counts days practised, not days the app
+  was opened, and one missed day per week is forgiven by a shield rather than
+  wiping the run.
+- **Welcome back** — the first open of a new day wakes Nova, shows the week so
+  far and hands over a sky gift (rare from three nights in, legendary from five).
 - **Tricky Facts** — every missed fact is recorded by id and can be drilled
   directly. One correct answer retires one miss.
 - **Star Blitz** — 60 seconds of × and ÷ facts, with a personal best.
@@ -80,9 +92,11 @@ js/questions.js  47 question generators, their SVG visuals, worked steps,
 js/state.js      saved progress (localStorage, guarded)
 js/fx.js         starfield, celebration bursts, WebAudio chimes
 js/toys.js       the toy roster and the present-unwrapping animation
+js/cub.js        Nova — the SVG star cub, its six forms and four moods
 js/app.js        screens and the stage loop
 scripts/         make-artifact.sh, for the Claude Artifact variant
 ```
 
-Progress saves to `localStorage` under `isha-star-atlas-v1`. "Erase all
+Progress saves to `localStorage` under `isha-star-atlas-v1`, flushed on tab
+close so the last answer is never lost. "Erase all
 progress" lives at the bottom of the Grown-ups tab.

@@ -29,8 +29,37 @@
       }
     }
 
+    /* Every so often a meteor crosses. Rare enough to still feel like luck. */
+    var shots = [], nextShot = 140;
+    function addShot() {
+      shots.push({
+        x: Math.random() * w * 0.7, y: Math.random() * h * 0.45,
+        vx: 5 + Math.random() * 3.5, vy: 2.2 + Math.random() * 1.6,
+        life: 60, max: 60
+      });
+    }
+
     function frame() {
       ctx.clearRect(0, 0, w, h);
+
+      if (--nextShot <= 0) { addShot(); nextShot = 420 + Math.random() * 900; }
+      for (var si = shots.length - 1; si >= 0; si--) {
+        var sh = shots[si];
+        sh.x += sh.vx; sh.y += sh.vy; sh.life--;
+        if (sh.life <= 0 || sh.x > w + 60 || sh.y > h + 60) { shots.splice(si, 1); continue; }
+        var fade = Math.min(1, sh.life / 18) * Math.min(1, (sh.max - sh.life) / 8);
+        var g = ctx.createLinearGradient(sh.x, sh.y, sh.x - sh.vx * 11, sh.y - sh.vy * 11);
+        g.addColorStop(0, 'rgba(255,245,210,' + (0.9 * fade) + ')');
+        g.addColorStop(1, 'rgba(255,201,74,0)');
+        ctx.strokeStyle = g;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sh.x, sh.y);
+        ctx.lineTo(sh.x - sh.vx * 11, sh.y - sh.vy * 11);
+        ctx.stroke();
+      }
+
       for (var i = 0; i < stars.length; i++) {
         var s = stars[i];
         s.p += s.tw;
