@@ -180,7 +180,8 @@
     { id: 'streak7', name: 'Week of Stars', glyph: '📅', desc: 'Practise 7 days in a row.' },
     { id: 'tricky0', name: 'Tricky Tamer', glyph: '🧠', desc: 'Clear every tricky fact.' },
     { id: 'frac', name: 'Fraction Friend', glyph: '💧', desc: 'Finish all of Fraction Falls.' },
-    { id: 'atlas', name: 'Atlas Complete', glyph: '🗺️', desc: 'Light up all eight regions.' }
+    { id: 'atlas', name: 'Atlas Complete', glyph: '🗺️', desc: 'Light up all eight regions.' },
+    { id: 'toybox', name: 'Toy Collector', glyph: '🎁', desc: 'Win every toy in the toy box.' }
   ];
 
   /* ---------- Levels ---------- */

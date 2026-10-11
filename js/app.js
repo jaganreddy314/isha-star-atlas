@@ -52,6 +52,7 @@
       case 'result': html = screenResult(route.p); break;
       case 'blitz': html = screenBlitz(); break;
       case 'tricky': html = screenTricky(); break;
+      case 'toys': html = screenToys(); break;
       case 'beasts': html = screenBeasts(); break;
       case 'shop': html = screenShop(); break;
       case 'grown': html = screenGrown(); break;
@@ -257,13 +258,7 @@
     var fb = $('#fb');
     if (!fb) return;
     var over = run.isBoss && run.hearts <= 0;
-    fb.className = 'fb ' + (right ? 'good' : 'bad');
-    fb.hidden = false;
-    fb.innerHTML = '<div class="fbhead">' + (right ? pickPraise() : 'Not quite — here is the trick') + '</div>' +
-      (right ? '' : '<div class="fbans">Answer: <b>' + ansHtml(q) + '</b></div>') +
-      '<div class="fbwhy">' + q.explain + '</div>' +
-      '<button class="go next" data-next="1">' + (over ? 'See how it went' : right ? 'Keep going' : 'Got it!') + '</button>';
-    D.querySelectorAll('.choice, .key, .go:not(.next), .power').forEach(function (b) { b.disabled = true; });
+
     if (q.choices) {
       D.querySelectorAll('.choice').forEach(function (b) {
         var c = q.choices[+b.dataset.pick];
@@ -271,8 +266,72 @@
         else if (String(c.v) === String(run.picked)) b.classList.add('no');
       });
     }
-    if (right && !FX.reduce) setTimeout(function () { if (run && run.locked) advance(); }, 1150);
-    fb.scrollIntoView({ block: 'nearest', behavior: FX.reduce ? 'auto' : 'smooth' });
+    D.querySelectorAll('.choice, .key, .go:not(.next), .power').forEach(function (b) { b.disabled = true; });
+
+    fb.hidden = false;
+    if (right) {
+      fb.className = 'fb good';
+      fb.innerHTML = '<div class="fbhead">' + pickPraise() + '</div>' +
+        '<button class="go next" data-next="1">' + (over ? 'See how it went' : 'Keep going') + '</button>';
+      giveToy();
+      if (!FX.reduce) setTimeout(function () { if (run && run.locked) advance(); }, 1250);
+    } else {
+      fb.className = 'fb bad fixit';
+      fb.innerHTML = fixItHtml(q, over);
+      fb.scrollIntoView({ block: 'nearest', behavior: FX.reduce ? 'auto' : 'smooth' });
+    }
+  }
+
+  /* Unwrap a present. Toys are drawn from a shuffled bag, so each one differs
+     from the last, and a first-time toy pays a small stardust bonus. */
+  function giveToy() {
+    if (!W.Toys) return;
+    var toy = W.Toys.draw();
+    var isNew = St.winToy(toy.id);
+    if (isNew) St.addDust(5);
+    FX.Sound.gift(isNew);
+    W.Toys.reveal(toy, isNew);
+    hud();
+  }
+
+  /* The repair panel: name the mistake she actually made, then walk the
+     method through one step at a time. */
+  function fixItHtml(q, over) {
+    var why = null, i;
+    if (q.choices) {
+      for (i = 0; i < q.choices.length; i++) {
+        if (String(q.choices[i].v) === String(run.picked)) { why = q.choices[i].why; break; }
+      }
+    } else if (Q.diagnoseTyped) {
+      why = Q.diagnoseTyped(q, run.picked);
+    }
+
+    var steps = (q.steps && q.steps.length) ? q.steps : [q.explain];
+    var stepHtml = '';
+    for (i = 0; i < steps.length; i++) {
+      stepHtml += '<li class="fxstep" style="--d:' + i + '"><span class="fxn">' + (i + 1) + '</span>' +
+        '<p>' + steps[i] + '</p></li>';
+    }
+
+    return '<div class="fxhead"><span class="fxorb">💫</span>' +
+      '<div class="fxtitle"><b>Let\'s relight this star</b><i>This is the part where it sticks</i></div></div>' +
+      '<div class="fxpicked"><span class="fxyou">You picked</span> <b>' + pickedHtml(q) + '</b>' +
+      '<p>' + (why || 'Not that one — here is how it works.') + '</p></div>' +
+      '<div class="fxwalk"><span class="fxlabel">Solve it together</span>' +
+      '<ol class="fxsteps">' + stepHtml + '</ol></div>' +
+      '<div class="fxans"><span>The answer is</span><b>' + ansHtml(q) + '</b>' +
+      (q.unit ? '<i>' + esc(q.unit) + '</i>' : '') + '</div>' +
+      '<button class="go next relight" data-next="1" data-relight="1">' +
+      (over ? 'See how it went' : 'I\'ve got it now') + ' <span class="plus">+2 ✨</span></button>';
+  }
+
+  function pickedHtml(q) {
+    if (q.choices) {
+      for (var i = 0; i < q.choices.length; i++) {
+        if (String(q.choices[i].v) === String(run.picked)) return q.choices[i].html;
+      }
+    }
+    return esc(run.picked);
   }
 
   function ansHtml(q) {
@@ -291,7 +350,9 @@
 
   function advance() {
     if (!run) return;
-    run.locked = false; run.typed = '';
+    run.locked = false; run.typed = ''; run.relit = false;
+    // The present is deliberately NOT cleared here — it keeps playing over the
+    // next question and flies off to the toy box on its own timer.
     if (run.isBoss && run.hearts <= 0) return finishRun(false);
     run.i++;
     if (run.i >= run.queue.length) return finishRun(true);
@@ -423,6 +484,13 @@
     clearInterval(blitz.timer);
     stopClock();
     var score = blitz.score, fresh = score > S.blitzBest;
+    var won = [], n = Math.floor(score / 5);
+    for (var w = 0; w < n; w++) {
+      var t2 = W.Toys.draw();
+      var isNew2 = St.winToy(t2.id);
+      if (isNew2) St.addDust(5);
+      won.push({ toy: t2, isNew: isNew2 });
+    }
     if (fresh) { S.blitzBest = score; St.save(); }
     St.addXp(Math.round(score * 2));
     St.addDust(score * 2);
@@ -436,6 +504,13 @@
       '<div class="rs"><b>' + miss + '</b><i>missed</i></div>' +
       '<div class="rs gold"><b>' + S.blitzBest + '</b><i>your best</i></div>' +
       '<div class="rs teal"><b>+' + score * 2 + '</b><i>stardust</i></div></div>' +
+      (won.length
+        ? '<div class="blitztoys"><span class="fxlabel">Presents won — one for every 5 correct</span><div class="btrow">' +
+          won.map(function (o) {
+            return '<span class="bt r-' + o.toy.r + '" title="' + esc(o.toy.name) + '">' + o.toy.g +
+              (o.isNew ? '<i>NEW</i>' : '') + '</span>';
+          }).join('') + '</div></div>'
+        : '<p class="lead" style="text-align:center">Get 5 correct in one blitz to win a present.</p>') +
       (badges.length ? '<div class="newbadges">' + badges.map(function (b) {
         return '<div class="nb"><span>' + b.glyph + '</span><b>' + esc(b.name) + '</b><i>' + esc(b.desc) + '</i></div>';
       }).join('') + '</div>' : '') +
@@ -530,6 +605,26 @@
     };
     startClock();
     go('play');
+  }
+
+  /* ======================= Toy Box ======================= */
+  function screenToys() {
+    var T = W.Toys, total = T.list.length, got = St.toyCount(), opened = St.toyTotal();
+    var cards = T.list.map(function (t) {
+      var n = S.toys[t.id] || 0;
+      if (!n) {
+        return '<div class="tcard locked r-' + t.r + '"><div class="tglyph">🎁</div>' +
+          '<b>? ? ?</b><i>' + T.rarity[t.r].label + '</i></div>';
+      }
+      return '<div class="tcard r-' + t.r + '"><div class="tglyph a-' + t.anim + '">' + t.g + '</div>' +
+        '<b>' + esc(t.name) + '</b><i>' + T.rarity[t.r].label + '</i>' +
+        '<span class="tcount">×' + n + '</span></div>';
+    }).join('');
+    return '<section class="panel"><h2 class="ph">🎁 Toy Box <span class="phsub">' +
+      got + ' of ' + total + ' toys found · ' + opened + ' present' + (opened === 1 ? '' : 's') + ' opened</span></h2>' +
+      '<p class="lead">Every question you get right unwraps a present, and no two in a row are the same. ' +
+      'The rare and legendary toys turn up less often — a brand new one pays 5 extra stardust.</p>' +
+      '<div class="tgrid">' + cards + '</div></section>';
   }
 
   /* ======================= Star Beasts ======================= */
@@ -642,7 +737,10 @@
     if (t.dataset.play) { FX.Sound.tap(); return startRun(t.dataset.play); }
     if (t.dataset.blitz) { FX.Sound.tap(); return startBlitz(); }
     if (t.dataset.tricky) { FX.Sound.tap(); return startTricky(); }
-    if (t.dataset.next) return advance();
+    if (t.dataset.next) {
+      if (t.dataset.relight && run && !run.relit) { run.relit = true; St.addDust(2); FX.Sound.star(); }
+      return advance();
+    }
 
     if (t.dataset.pick !== undefined) {
       if (blitz) return blitzAnswer(+t.dataset.pick);
@@ -730,6 +828,7 @@
   function boot() {
     new FX.Sky(D.getElementById('sky'));
     burst = new FX.Burst(D.getElementById('fx'));
+    if (W.Toys) W.Toys.init(burst);
     render();
   }
 

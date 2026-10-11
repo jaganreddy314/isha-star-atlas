@@ -748,3 +748,324 @@ table.stats .num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001s !important; transition-duration: .001s !important; }
 }
+
+/* ======================================================================
+   THE PRESENT — every correct answer unwraps a toy
+   ====================================================================== */
+.giftwrap {
+  position: fixed;
+  left: 50%; top: 40%;
+  transform: translate(-50%, -50%);
+  z-index: 70;
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: 150px auto;
+  justify-items: center;
+  --gc1: #FF9BD2; --gc2: #E0559F; --gglow: rgba(255, 121, 196, .5);
+}
+.giftwrap.r-rare { --gc1: #7FE9FF; --gc2: #2E9BD6; --gglow: rgba(69, 224, 192, .55); }
+.giftwrap.r-legend { --gc1: #FFDE87; --gc2: #E89A1C; --gglow: rgba(255, 201, 74, .65); }
+
+/* a soft spotlight so the toy reads clearly over whatever is behind it */
+.giftscrim {
+  position: fixed; inset: 0;
+  z-index: 69;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%,
+    rgba(4, 6, 18, .95) 0%, rgba(4, 6, 18, .9) 14%, rgba(4, 6, 18, .6) 24%, rgba(4, 6, 18, 0) 46%);
+  /* One animation covering the whole 2.1s life of the present: stacking a
+     fade-in and a delayed fade-out left the element stuck at opacity 0. */
+  animation: scrimCycle 2.1s ease-out forwards;
+}
+@keyframes scrimCycle {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  71% { opacity: 1; }
+  93% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+.rays, .giftbox, .toypop { grid-area: 1 / 1; align-self: center; }
+.toylabel { grid-area: 2 / 1; }
+
+.rays {
+  width: 190px; height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gglow) 0%, transparent 62%);
+  animation: raysOut .6s ease-out .6s both;
+}
+.giftwrap.r-legend .rays { width: 240px; height: 240px; }
+
+/* the box, drawn in CSS */
+.giftbox {
+  position: relative;
+  width: 98px; height: 110px;
+  animation: giftIn .28s cubic-bezier(.2, 1.7, .4, 1) both,
+             giftShake .42s ease-in-out .3s 1,
+             giftGone .28s ease-in .64s forwards;
+}
+.gb-body {
+  position: absolute; left: 6px; bottom: 0;
+  width: 86px; height: 72px;
+  border-radius: 7px;
+  background: linear-gradient(160deg, var(--gc1), var(--gc2));
+  box-shadow: inset 0 -8px 16px rgba(0, 0, 0, .18);
+}
+.gb-lid {
+  position: absolute; left: 0; top: 14px;
+  width: 98px; height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(160deg, var(--gc1), var(--gc2));
+  filter: brightness(1.12);
+  animation: lidOff .5s cubic-bezier(.3, -.5, .6, 1) .62s forwards;
+}
+.gb-band {
+  position: absolute; left: 41px; bottom: 0;
+  width: 16px; height: 72px;
+  background: linear-gradient(180deg, #FFE39B, var(--gold));
+  border-radius: 2px;
+}
+.gb-bow {
+  position: absolute; top: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 30px;
+  animation: bowOff .5s cubic-bezier(.3, -.5, .6, 1) .62s forwards;
+}
+
+.toypop {
+  animation: toyPop .46s cubic-bezier(.2, 1.75, .4, 1) .7s backwards;
+}
+.toy {
+  font-size: 66px;
+  line-height: 1;
+  filter: drop-shadow(0 7px 16px rgba(0, 0, 0, .5));
+}
+
+.toylabel {
+  margin-top: 6px;
+  text-align: center;
+  animation: labelUp .38s ease-out .88s backwards;
+}
+.toylabel b {
+  display: block;
+  font-family: var(--display);
+  font-size: 21px; font-weight: 800;
+  color: var(--text);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .7);
+}
+.toylabel i {
+  font-style: normal;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--gc1);
+}
+.newtag {
+  display: inline-block;
+  padding: 2px 10px; margin-bottom: 4px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep));
+  color: #2A1B00;
+  font-family: var(--display);
+  font-size: 12px; font-weight: 800; letter-spacing: 1px;
+  animation: newPop .4s cubic-bezier(.2, 1.8, .4, 1) 1s backwards;
+}
+
+.giftwrap.away { animation: flyAway .55s ease-in forwards; }
+
+@keyframes giftIn { from { transform: scale(0) rotate(-25deg); } }
+@keyframes giftShake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-9deg); }
+  45% { transform: rotate(8deg); }
+  70% { transform: rotate(-5deg); }
+}
+@keyframes giftGone { to { transform: scale(.5); opacity: 0; } }
+@keyframes lidOff { to { transform: translateY(-82px) rotate(32deg); opacity: 0; } }
+@keyframes bowOff { to { transform: translateX(-50%) translateY(-96px) rotate(-28deg); opacity: 0; } }
+@keyframes raysOut { from { transform: scale(.2); opacity: 0; } 60% { opacity: 1; } to { transform: scale(1.1); opacity: .75; } }
+@keyframes toyPop { from { transform: scale(.1); opacity: 0; } }
+@keyframes labelUp { from { transform: translateY(14px); opacity: 0; } }
+@keyframes newPop { from { transform: scale(0) rotate(-14deg); } }
+@keyframes flyAway { to { transform: translate(-50%, -50%) translate(26vw, -40vh) scale(.15); opacity: 0; } }
+
+/* --- each toy moves its own way --- */
+@keyframes hop { 0%,100% { transform: translateY(0) scaleY(1); } 30% { transform: translateY(-20px) scaleY(1.06); } 55% { transform: translateY(0) scaleY(.92); } }
+@keyframes float { 0%,100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-14px) rotate(5deg); } }
+@keyframes bounce { 0%,100% { transform: translateY(0) scale(1.08, .9); } 40% { transform: translateY(-26px) scale(.93, 1.1); } }
+@keyframes drop { 0%,100% { transform: translateY(-6px); } 50% { transform: translateY(24px); } }
+@keyframes waddle { 0%,100% { transform: translateX(-7px) rotate(-13deg); } 50% { transform: translateX(7px) rotate(13deg); } }
+@keyframes wiggle { 0%,100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } }
+@keyframes snap { 0%,100% { transform: scale(1); } 45% { transform: scale(1.17); } }
+@keyframes beat { 0%,100% { transform: scale(1) rotate(0); } 25% { transform: scale(1.2) rotate(-7deg); } 60% { transform: scale(.96) rotate(6deg); } }
+@keyframes sway { 0%,100% { transform: translateX(-11px) rotate(-19deg); } 50% { transform: translateX(11px) rotate(19deg); } }
+@keyframes zoom { 0%,100% { transform: translateX(-18px); } 50% { transform: translateX(18px); } }
+@keyframes glide { 0%,100% { transform: translate(-20px, 6px) rotate(-9deg); } 50% { transform: translate(20px, -6px) rotate(9deg); } }
+@keyframes chug { 0%,100% { transform: translate(-15px, 0); } 25% { transform: translate(0, -4px); } 50% { transform: translate(15px, 0); } 75% { transform: translate(0, -4px); } }
+@keyframes march { 0%,100% { transform: translateX(-11px) rotate(-10deg); } 50% { transform: translateX(11px) rotate(10deg); } }
+@keyframes stomp { 0%,100% { transform: translateY(0) scale(1.07, .9); } 35% { transform: translateY(-17px) scale(.95, 1.08); } }
+@keyframes flutter { 0%,100% { transform: translateY(-8px) rotate(-17deg); } 50% { transform: translateY(8px) rotate(17deg); } }
+@keyframes roll { from { transform: translateX(-20px) rotate(0); } to { transform: translateX(20px) rotate(360deg); } }
+@keyframes swing { 0%,100% { transform: rotate(-23deg); } 50% { transform: rotate(23deg); } }
+@keyframes leap { 0%,100% { transform: translate(-14px, 10px) rotate(-16deg); } 50% { transform: translate(14px, -14px) rotate(16deg); } }
+@keyframes notes { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-11px) scale(1.1); } }
+@keyframes launch { 0% { transform: translateY(10px) rotate(-6deg); } 100% { transform: translateY(-16px) rotate(6deg); } }
+@keyframes gallop { 0%,100% { transform: translate(-11px, 4px); } 50% { transform: translate(11px, -10px); } }
+@keyframes sparkle { 0%,100% { transform: rotate(-22deg) scale(1); } 50% { transform: rotate(22deg) scale(1.16); } }
+@keyframes build { 0%,100% { transform: scaleY(.93); } 50% { transform: scaleY(1.08); } }
+@keyframes kaleid { from { transform: rotate(0); filter: hue-rotate(0); } to { transform: rotate(360deg); filter: hue-rotate(360deg); } }
+
+.a-hop { animation: hop .85s ease-in-out infinite; }
+.a-float { animation: float 1.8s ease-in-out infinite; }
+.a-bounce { animation: bounce .72s ease-in-out infinite; }
+.a-drop { animation: drop 1.1s ease-in-out infinite; }
+.a-waddle { animation: waddle .62s ease-in-out infinite; }
+.a-wiggle { animation: wiggle .5s ease-in-out infinite; }
+.a-snap { animation: snap .7s ease-in-out infinite; }
+.a-beat { animation: beat .45s ease-in-out infinite; }
+.a-sway { animation: sway 1.5s ease-in-out infinite; }
+.a-zoom { animation: zoom .9s ease-in-out infinite; }
+.a-glide { animation: glide 1.9s ease-in-out infinite; }
+.a-chug { animation: chug 1.2s linear infinite; }
+.a-march { animation: march .5s steps(2, end) infinite; }
+.a-stomp { animation: stomp .8s ease-in-out infinite; }
+.a-flutter { animation: flutter .38s ease-in-out infinite; }
+.a-roll { animation: roll 1.4s linear infinite alternate; }
+.a-swing { animation: swing 1.2s ease-in-out infinite; transform-origin: 50% 8%; }
+.a-leap { animation: leap 1s ease-in-out infinite; }
+.a-notes { animation: notes .8s ease-in-out infinite; }
+.a-launch { animation: launch .9s ease-in-out infinite alternate; }
+.a-gallop { animation: gallop .55s ease-in-out infinite; }
+.a-sparkle { animation: sparkle 1s ease-in-out infinite; }
+.a-build { animation: build .9s ease-in-out infinite; transform-origin: 50% 100%; }
+.a-kaleid { animation: kaleid 3.4s linear infinite; }
+
+/* ======================================================================
+   TOY BOX
+   ====================================================================== */
+.tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 10px; }
+.tcard {
+  padding: 13px 8px 11px;
+  border-radius: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.tcard.r-rare { border-color: rgba(69, 224, 192, .45); }
+.tcard.r-legend {
+  border-color: rgba(255, 201, 74, .55);
+  background: linear-gradient(180deg, rgba(255, 201, 74, .13), var(--panel-2));
+}
+.tcard .tglyph { font-size: 36px; line-height: 1.1; }
+/* the toys hold still in the cabinet until you look at one */
+.tcard .tglyph[class*="a-"] { animation-play-state: paused; }
+.tcard:hover .tglyph[class*="a-"] { animation-play-state: running; }
+.tcard b { display: block; font-family: var(--display); font-size: 13.5px; margin-top: 4px; line-height: 1.25; }
+.tcard i { font-style: normal; font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.tcard.r-rare i { color: var(--teal); }
+.tcard.r-legend i { color: var(--gold); }
+.tcount {
+  position: absolute; top: 7px; right: 8px;
+  font-family: var(--display); font-size: 12px; font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.tcard.locked { opacity: .45; }
+.tcard.locked .tglyph { filter: grayscale(1); }
+
+.blitztoys { margin: 16px 0 4px; }
+.btrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bt {
+  position: relative;
+  width: 52px; height: 52px;
+  display: grid; place-items: center;
+  font-size: 27px;
+  border-radius: 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  animation: toyPop .4s cubic-bezier(.2, 1.7, .4, 1) backwards;
+}
+.bt.r-rare { border-color: rgba(69, 224, 192, .5); }
+.bt.r-legend { border-color: var(--gold); background: rgba(255, 201, 74, .14); }
+.bt i {
+  position: absolute; bottom: -5px;
+  font-style: normal; font-size: 8.5px; font-weight: 800; letter-spacing: .5px;
+  padding: 1px 5px; border-radius: 99px;
+  background: var(--gold); color: #2A1B00;
+}
+
+/* ======================================================================
+   THE REPAIR PANEL — what went wrong, and the way through it
+   ====================================================================== */
+.fb.fixit { padding: 16px; }
+.fxhead { display: flex; align-items: center; gap: 12px; }
+.fxorb { font-size: 30px; flex: none; animation: orbPulse 1.7s ease-in-out infinite; }
+@keyframes orbPulse { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.12); filter: brightness(1.35); } }
+.fxtitle b { display: block; font-family: var(--display); font-size: 19px; font-weight: 800; color: var(--gold); }
+.fxtitle i { font-style: normal; font-size: 12.5px; color: var(--muted); }
+
+.fxpicked {
+  margin-top: 13px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: rgba(255, 107, 116, .12);
+  border-left: 3px solid var(--coral);
+  animation: stepIn .35s ease-out backwards;
+}
+.fxyou { font-size: 11px; letter-spacing: 1.1px; text-transform: uppercase; font-weight: 800; color: var(--coral); }
+.fxpicked > b { font-family: var(--display); font-size: 21px; vertical-align: middle; margin-left: 4px; }
+.fxpicked p { margin: 7px 0 0; font-size: 14.5px; line-height: 1.5; }
+
+.fxwalk { margin-top: 15px; }
+.fxlabel {
+  display: block;
+  font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+  font-weight: 800; color: var(--teal);
+  margin-bottom: 9px;
+}
+.fxsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fxstep {
+  display: flex; gap: 11px; align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(155, 139, 255, .11);
+  border: 1px solid var(--line-soft);
+  animation: stepIn .42s ease-out backwards;
+  animation-delay: calc(var(--d) * 190ms + 150ms);
+}
+@keyframes stepIn { from { transform: translateX(-14px); opacity: 0; } }
+.fxn {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--violet);
+  color: #0A0E26;
+  font-family: var(--display); font-size: 14px; font-weight: 800;
+  display: grid; place-items: center;
+}
+.fxstep p { margin: 0; font-size: 14.5px; line-height: 1.45; }
+
+.fxans {
+  margin-top: 15px;
+  padding: 13px;
+  border-radius: 14px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(255, 201, 74, .22), rgba(69, 224, 192, .1));
+  border: 1px solid var(--gold);
+  animation: ansGlow .5s ease-out .78s backwards;
+}
+@keyframes ansGlow { from { transform: scale(.9); opacity: 0; } }
+.fxans span { display: block; font-size: 11px; letter-spacing: 1.1px; text-transform: uppercase; font-weight: 800; color: var(--muted); }
+.fxans b { font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--gold); line-height: 1.2; }
+.fxans i { font-style: normal; font-size: 13px; color: var(--muted); margin-left: 6px; }
+
+.go.relight { background: linear-gradient(180deg, var(--teal), #27B79A); color: #04231D; box-shadow: 0 6px 0 rgba(20, 130, 110, .6); }
+.go.relight:active { box-shadow: 0 3px 0 rgba(20, 130, 110, .6); }
+.go.relight .plus { font-size: 13px; opacity: .75; margin-left: 4px; }
+
+@media (max-width: 430px) {
+  .giftwrap { grid-template-rows: 130px auto; }
+  .toy { font-size: 56px; }
+  .tgrid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+}

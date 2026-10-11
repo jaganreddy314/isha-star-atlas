@@ -24,6 +24,7 @@
       beasts: {},           // beastId -> true
       badges: {},           // badgeId -> true
       owned: {},            // cosmetic id -> true
+      toys: {},             // toy id -> how many won
       powers: { hint: 1, skip: 0, shield: 0, double: 0 },
       look: null,           // equipped cosmetic id
       facts: {},            // factId -> {s: seen, w: wrong}
@@ -184,6 +185,16 @@
     return t;
   }
 
+  /* ---------- the toy box ---------- */
+  function winToy(id) {
+    var isNew = !S.toys[id];
+    S.toys[id] = (S.toys[id] || 0) + 1;
+    save();
+    return isNew;
+  }
+  function toyCount() { var n = 0; for (var k in S.toys) if (S.toys[k]) n++; return n; }
+  function toyTotal() { var n = 0; for (var k in S.toys) n += S.toys[k]; return n; }
+
   /* ---------- badges ---------- */
   function checkBadges(ctx) {
     ctx = ctx || {};
@@ -200,6 +211,7 @@
     if (S.streak >= 7) give('streak7');
     if (S.answered >= 30 && trickyList().length === 0) give('tricky0');
     if (S.bossBeaten.falls) give('frac');
+    if (W.Toys && toyCount() >= W.Toys.list.length) give('toybox');
     var all = true;
     for (var i = 0; i < A.REGIONS.length; i++) if (!S.bossBeaten[A.REGIONS[i].id]) all = false;
     if (all) give('atlas');
@@ -211,6 +223,7 @@
     s: S, load: load, save: save, today: today,
     addXp: addXp, addDust: addDust, spend: spend,
     record: record, trickyList: trickyList,
+    winToy: winToy, toyCount: toyCount, toyTotal: toyTotal,
     starsFor: starsFor, setStars: setStars, regionStars: regionStars,
     stageUnlocked: stageUnlocked, bossUnlocked: bossUnlocked,
     regionUnlocked: regionUnlocked, totalStars: totalStars,

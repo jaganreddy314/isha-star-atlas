@@ -35,6 +35,17 @@ No build step and no dependencies — plain HTML, CSS and ES5 JavaScript.
 - **Bosses** — 12 questions, 3 hearts. Beat one and its Star Beast constellation
   joins the collection.
 - **Combos** — 5 in a row doubles XP and stardust, 10 in a row triples it.
+- **Presents** — every correct answer unwraps a toy, drawn from a shuffled bag
+  so no two in a row match. 27 toys across three rarities, each with its own
+  animation, collected in the Toy Box. A first-time toy pays 5 extra stardust.
+  Star Blitz is too fast for one per answer, so it awards a toy per 5 correct
+  at the end.
+- **The repair panel** — a missed answer opens "Let's relight this star": it
+  names the specific mistake behind the answer she picked, walks the method
+  through step by step, then shows the answer. Clicking "I've got it now"
+  pays 2 stardust. Multiple-choice distractors each carry their own reason;
+  typed answers are diagnosed for dropped carries, borrowing the wrong way
+  round, digit swaps and off-by-one slips.
 - **Tricky Facts** — every missed fact is recorded by id and can be drilled
   directly. One correct answer retires one miss.
 - **Star Blitz** — 60 seconds of × and ÷ facts, with a personal best.
@@ -64,9 +75,11 @@ Artifacts supply their own `<head>`, so republishing there uses a stripped copy:
 index.html       page shell (standalone document)
 styles.css       the whole night-sky look
 js/data.js       regions, stages, constellations, shop, badges, quests
-js/questions.js  47 question generators + their SVG visuals
+js/questions.js  47 question generators, their SVG visuals, worked steps,
+                 per-distractor reasons and the typed-answer diagnostics
 js/state.js      saved progress (localStorage, guarded)
 js/fx.js         starfield, celebration bursts, WebAudio chimes
+js/toys.js       the toy roster and the present-unwrapping animation
 js/app.js        screens and the stage loop
 scripts/         make-artifact.sh, for the Claude Artifact variant
 ```

@@ -164,6 +164,13 @@
       if (!on) return;
       [392, 523, 659, 784, 1047, 1319].forEach(function (f, i) { tone(f, i * 0.08, 0.38, 'sine', 0.13); });
     },
+    gift: function (isNew) {
+      if (!on) return;
+      // A quick ribbon-pull, then the toy's chime.
+      tone(300, 0, 0.06, 'triangle', 0.06);
+      [659, 784, 1047].forEach(function (f, i) { tone(f, 0.1 + i * 0.07, 0.26, 'triangle', 0.12); });
+      if (isNew) [1319, 1568].forEach(function (f, i) { tone(f, 0.34 + i * 0.08, 0.34, 'sine', 0.11); });
+    },
     hit: function () { if (on) { tone(140, 0, 0.22, 'square', 0.08); } },
     tick: function () { if (on) tone(880, 0, 0.04, 'sine', 0.05); }
   };
