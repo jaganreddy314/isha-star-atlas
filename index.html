@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Isha's Star Atlas</title>
+<meta name="description" content="A grade-3 maths adventure: light up constellations across eight regions of the night sky.">
+<meta name="theme-color" content="#080B1F">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<div class="shell">
+  <header class="hud">
+    <div class="who">
+      <div class="avatar"><span id="avatarGlyph">🔭</span><b id="levelNum">1</b></div>
+      <div class="whotext">
+        <span class="kname" id="keeperName">Isha · Star Spotter</span>
+        <div class="xp"><i id="xpFill" style="width:0%"></i></div>
+        <span class="xptext" id="xpText">0 / 80 XP</span>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip gold" title="Stars earned">⭐ <b id="chipStars">0</b></span>
+      <span class="chip teal" title="Stardust to spend">✨ <b id="chipDust">0</b></span>
+      <span class="chip pink" title="Day streak">🔥 <b id="chipStreak">0</b></span>
+      <button class="chip btn" id="soundBtn" aria-label="Turn sound off">🔔</button>
+    </div>
+  </header>
+
+  <nav class="nav" aria-label="Sections">
+    <button class="navbtn on" data-nav="map">🗺️ Sky Map</button>
+    <button class="navbtn" data-nav="blitz">⚡ Star Blitz</button>
+    <button class="navbtn" data-nav="tricky">🧠 Tricky Facts</button>
+    <button class="navbtn" data-nav="beasts">🦊 Star Beasts</button>
+    <button class="navbtn" data-nav="shop">✨ Shop</button>
+    <button class="navbtn" data-nav="grown">👪 Grown-ups</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer class="foot">Built for Isha · grade 3 maths, eight regions of sky</footer>
+</div>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script src="js/data.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/state.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
